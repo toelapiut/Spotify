@@ -1,0 +1,5 @@
+.idea
+.env
+build
+dist
+spotipie.egg-info/
