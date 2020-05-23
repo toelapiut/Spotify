@@ -53,7 +53,7 @@ class SpotipieAuth(object):
         r = requests.post(token_uri, data=data, headers=headers)
         response = r.json()
         if r.status_code not in range(200, 299):
-            return False
+            raise Exception("client was not authenticated")
         now = datetime.datetime.now()
         access_token = response['access_token']
         expires_in = response['expires_in']
@@ -63,3 +63,14 @@ class SpotipieAuth(object):
         self.access_token_did_expire = expires < now
         return True
 
+    def get_access_token (self):
+        token = self.access_token
+        expires = self.access_token_expires
+        now = datetime.datetime.now()
+        if expires < now:
+            self.auth_process()
+            return self.get_access_token()
+        elif token is None:
+            self.auth_process()
+            return self.get_access_token()
+        return token
