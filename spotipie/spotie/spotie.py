@@ -1,15 +1,17 @@
 import base64
 import requests
 import datetime
+from urllib.parse import urlencode
 
 
-class SpotipieAuth(object):
+class Spotipie(object):
     access_token = None
     access_token_expires = datetime.datetime.now()
     access_token_did_expire = True
     client_id = None
     client_secret = None
     token_uri = 'https://accounts.spotify.com/api/token'
+    search_uri = 'https://api.spotify.com/v1/search'
 
     def __init__ (self, client_id, client_secret, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,13 +55,40 @@ class SpotipieAuth(object):
         r = requests.post(token_uri, data=data, headers=headers)
         response = r.json()
         if r.status_code not in range(200, 299):
-            return False
+            raise Exception("client was not authenticated")
         now = datetime.datetime.now()
         access_token = response['access_token']
         expires_in = response['expires_in']
         expires = now + datetime.timedelta(seconds=expires_in)
         self.access_token = access_token
-        self.access_token_expires = expires_in
+        self.access_token_expires = expires
         self.access_token_did_expire = expires < now
         return True
 
+    def get_access_token (self):
+        token = self.access_token
+        expires = self.access_token_expires
+        now = datetime.datetime.now()
+        if expires < now:
+            self.auth_process()
+            return self.get_access_token()
+        elif token is None:
+            self.auth_process()
+            return self.get_access_token()
+        return token
+
+    def get_search_header (self):
+        token = self.get_access_token()
+        return {
+            "Authorization": f"Bearer {token}"
+        }
+
+    def search (self, query, query_type):
+        headers = self.get_search_header()
+        query_param = urlencode({"q": query, "type": query_type.lower()})
+        query_string = f'{self.search_uri}?{query_param}'
+        request = requests.get(query_string, headers=headers)
+        print(request.json())
+        if request.status_code not in range(200, 299):
+            return {}
+        return request.json()
