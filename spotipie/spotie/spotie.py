@@ -3,6 +3,8 @@ import requests
 import datetime
 from urllib.parse import urlencode
 
+base_url = 'https://api.spotify.com/v1'
+
 
 class Spotipie(object):
     access_token = None
@@ -10,8 +12,7 @@ class Spotipie(object):
     access_token_did_expire = True
     client_id = None
     client_secret = None
-    token_uri = 'https://accounts.spotify.com/api/token'
-    search_uri = 'https://api.spotify.com/v1/search'
+    token_url = 'https://accounts.spotify.com/api/token'
 
     def __init__ (self, client_id, client_secret, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,10 +50,10 @@ class Spotipie(object):
         """
         :return: Boolean that indicates whether you've been granted access(True) or not(False)
         """
-        token_uri = self.token_uri
+        token_url = self.token_url
         data = self.get_token_data()
         headers = self.get_token_header()
-        r = requests.post(token_uri, data=data, headers=headers)
+        r = requests.post(token_url, data=data, headers=headers)
         response = r.json()
         if r.status_code not in range(200, 299):
             raise Exception("client was not authenticated")
@@ -77,16 +78,31 @@ class Spotipie(object):
             return self.get_access_token()
         return token
 
-    def get_search_header (self):
+    def get_resource_header (self):
         token = self.get_access_token()
         return {
             "Authorization": f"Bearer {token}"
         }
 
-    def search (self, query, query_type):
-        headers = self.get_search_header()
+    def get_resource (self, _id, resources, v='v1'):
+        headers = self.get_resource_header()
+        resource_url = f'{base_url}/{v}/{resources}/{_id}',
+        request = requests.get(resource_url, headers=headers)
+        if request.status_code not in range(200, 299):
+            return {}
+        return request.json()
+
+    def get_album (self, _id):
+        return self.get_resource(_id, resources='album')
+
+    def get_artist (self, _id):
+        return self.get_resource(_id, resources='artist')
+
+    def search (self, query, query_type, v='v1'):
+        headers = self.get_resource_header()
+        search_url = f'{base_url}/{v}/search'
         query_param = urlencode({"q": query, "type": query_type.lower()})
-        query_string = f'{self.search_uri}?{query_param}'
+        query_string = f'{search_url}?{query_param}'
         request = requests.get(query_string, headers=headers)
         print(request.json())
         if request.status_code not in range(200, 299):
