@@ -1,5 +1,7 @@
 .idea
-.env
+*.env
 build
 dist
 spotipie.egg-info/
+virtual
+__pycache__
